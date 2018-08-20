@@ -22,10 +22,13 @@ namespace tokenlock {
     public:
         token( account_name self ):contract(self){}
 
+//        /// @abi action
+//        void create( account_name   issuer,
+//                     asset          maximum_supply,
+//                     string         token_name );
         /// @abi action
         void create( account_name   issuer,
-                     asset          maximum_supply,
-                     string         token_name );
+                     asset          maximum_supply);
 
         /// @abi action
         void issue( account_name    to,
@@ -65,13 +68,19 @@ namespace tokenlock {
             uint64_t primary_key()const { return balance.symbol.name(); }
         };
 
+//        /// @abi table stat i64
+//        struct currency_stat {
+//            asset           supply;
+//            asset           max_supply;
+//            account_name    issuer;
+//            string          token_name;
+//            uint64_t primary_key()const { return supply.symbol.name(); }
+//        };
         /// @abi table stat i64
         struct currency_stat {
             asset           supply;
             asset           max_supply;
             account_name    issuer;
-            string          token_name;
-
             uint64_t primary_key()const { return supply.symbol.name(); }
         };
 

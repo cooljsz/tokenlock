@@ -7,7 +7,8 @@
 
 namespace tokenlock {
 
-    void token::create( account_name issuer, asset maximum_supply, string token_name) {
+//    void token::create( account_name issuer, asset maximum_supply, string token_name) {
+    void token::create( account_name issuer, asset maximum_supply) {
         require_auth( _self );
 
         eosio_assert( is_account( issuer ), "issuer does not exist");
@@ -21,13 +22,13 @@ namespace tokenlock {
         auto existing = statstable.find( sym.name() );
         eosio_assert( existing == statstable.end(), "token with symbol already exists" );
 
-        eosio_assert( token_name.size() <= 30, "token_name has more than 30 bytes" );
+//        eosio_assert( token_name.size() <= 30, "token_name has more than 30 bytes" );
 
         statstable.emplace( _self, [&]( auto& s ) {
             s.supply.symbol = maximum_supply.symbol;
             s.max_supply    = maximum_supply;
             s.issuer        = issuer;
-            s.token_name    = token_name;
+//            s.token_name    = token_name;
         });
     }
 
@@ -67,37 +68,37 @@ namespace tokenlock {
                            time_point_sec   start_time,
                            string           memo )
     {
-        eosio_assert( is_account( to ), "to account does not exist");
-
-        eosio_assert( quantity.is_valid(), "invalid quantity" );
-        eosio_assert( quantity.amount > 0, "must issue positive quantity" );
-
         auto sym = quantity.symbol;
         eosio_assert( sym.is_valid(), "invalid symbol name" );
+        eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
+
         auto sym_name = sym.name();
         stats statstable( _self, sym_name );
         auto existing = statstable.find( sym_name );
         eosio_assert( existing != statstable.end(), "token with symbol does not exist, create token before issue" );
         const auto& st = *existing;
 
-        eosio_assert( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+        require_auth( st.issuer );
+        eosio_assert( quantity.is_valid(), "invalid quantity" );
+        eosio_assert( quantity.amount > 0, "must issue positive quantity" );
 
+        eosio_assert( quantity.symbol == st.supply.symbol, "symbol precision mismatch" );
+        eosio_assert( quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
+
+
+
+        eosio_assert( is_account( to ), "to account does not exist");
         eosio_assert( st.issuer != to, "cannot issue with locking to issuer" );
 
         eosio_assert( times > 0 && times < 10000  && interval_day > 0 && interval_day < 10000, "times and interval_day must greater then 0 and less then 10000" );
 
         uint32_t start_time_s = start_time.utc_seconds;
-        eosio_assert( start_time_s > now() && (start_time_s - now() <= 3600 * 24 * 30), "start_time can't be past and can't more than a month from now" );
-
-        eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
-
-
-        require_auth( st.issuer );
+//        eosio_assert( start_time_s > now() && (start_time_s - now() <= 3600 * 24 * 30), "start_time can't be past and can't more than a month from now" );
+        eosio_assert( start_time_s > now() && (start_time_s - now() <= 3600 * 24 * 365 * 5), "start_time can't be past and can't more than 5 years from now" );
 
         int64_t total_amount = quantity.amount * times;
         eosio_assert( total_amount / times == quantity.amount , "quantity.amount * times calculation overflow" );
         asset total_asset = quantity * times;
-        eosio_assert( total_amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
 
         statstable.modify( st, 0, [&]( auto& s ) {
             s.supply += total_asset;
